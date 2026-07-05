@@ -1,0 +1,16 @@
+# Fallback chains are defined per model tier, not per specific model,
+# so the gateway always finds an available option.
+tiers:
+  frontier:
+    members: [gpt-4o, claude-sonnet]
+    chain: [gpt-4o, claude-sonnet, llama3-local]
+  economy:
+    members: [gpt-4o-mini, llama3-local]
+    chain: [gpt-4o-mini, llama3-local]
+retry:
+  max_attempts: 3
+  base_delay_ms: 100
+circuit_breaker:
+  failure_threshold: 5
+  window_seconds: 30
+  cooldown_seconds: 20

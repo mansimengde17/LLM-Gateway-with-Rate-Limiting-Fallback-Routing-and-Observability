@@ -1,0 +1,26 @@
+# Team configuration. Hot reloadable through the admin API.
+teams:
+  team-search:
+    api_key: gw-search-7f3a
+    plan: enterprise
+    allowed_models: [gpt-4o, claude-sonnet, llama3-local]
+    requests_per_minute: 300
+    tokens_per_minute: 200000
+    daily_budget_usd: 50.0
+    priority: realtime
+  team-batch:
+    api_key: gw-batch-2c9d
+    plan: standard
+    allowed_models: [gpt-4o-mini, llama3-local]
+    requests_per_minute: 120
+    tokens_per_minute: 80000
+    daily_budget_usd: 10.0
+    priority: batch
+  team-support:
+    api_key: gw-support-5e1b
+    plan: standard
+    allowed_models: [gpt-4o, gpt-4o-mini, claude-sonnet]
+    requests_per_minute: 180
+    tokens_per_minute: 120000
+    daily_budget_usd: 25.0
+    priority: realtime
