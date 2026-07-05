@@ -185,22 +185,22 @@ canvas.sim { flex:1; min-height:0; width:100%; border-radius:10px;
       </div>
       <div class="tab-pane" id="tab-workflow">
         <div class="flow" id="flow">
-<div class="fstep"><div class="fi">01</div>
-<div class="fstep"><div class="fi">02</div>
-<div class="fstep"><div class="fi">03</div>
-<div class="fstep"><div class="fi">04</div>
-<div class="fstep"><div class="fi">05</div>
-<div class="fstep"><div class="fi">06</div>
+<div class="fstep"><div class="fi">01</div><b>Request in</b><p>A team sends a completion request with a bearer token to the gateway endpoint.</p></div>
+<div class="fstep"><div class="fi">02</div><b>Auth and limits</b><p>Identity resolved from token; rate limit and monthly budget checked against Redis counters.</p></div>
+<div class="fstep"><div class="fi">03</div><b>Retry policy</b><p>Retryable upstream errors retry up to three times with exponential backoff and jitter.</p></div>
+<div class="fstep"><div class="fi">04</div><b>Provider select</b><p>Gateway picks the healthiest provider from the per model fallback chain.</p></div>
+<div class="fstep"><div class="fi">05</div><b>Circuit breaker</b><p>Persistent failures trip the breaker open; it sends a probe request after the cooldown window.</p></div>
+<div class="fstep"><div class="fi">06</div><b>Trace and metrics</b><p>A span is emitted to Jaeger; request count and latency histograms go to Prometheus.</p></div>
         </div>
       </div>
       <div class="tab-pane" id="tab-depth">
         <div class="arch">
-<div class="step"><div class="n">1</div>
-<div class="step"><div class="n">2</div>
-<div class="step"><div class="n">3</div>
-<div class="step"><div class="n">4</div>
-<div class="step"><div class="n">5</div>
-<div class="step"><div class="n">6</div>
+<div class="step"><div class="n">1</div><div><b>Auth middleware</b><p>Resolves team identity and permission scope from the bearer token in Redis.</p></div></div>
+<div class="step"><div class="n">2</div><div><b>Token bucket rate limiter</b><p>Refills on read using a timestamp delta; requires no background timer process.</p></div></div>
+<div class="step"><div class="n">3</div><div><b>Budget enforcer</b><p>Hard monthly ceiling per team tracked in real time against a Redis spend counter.</p></div></div>
+<div class="step"><div class="n">4</div><div><b>Retry engine</b><p>Exponential backoff with full jitter on 429 and 5xx; respects Retry-After headers.</p></div></div>
+<div class="step"><div class="n">5</div><div><b>Circuit breaker</b><p>Transitions closed, open, and half open states based on configurable failure thresholds.</p></div></div>
+<div class="step"><div class="n">6</div><div><b>Observability pipeline</b><p>OpenTelemetry traces plus Prometheus metrics broken down by team and provider.</p></div></div>
         </div>
       </div>
       <div class="tab-pane" id="tab-code">
@@ -253,11 +253,7 @@ curl -s localhost:8000/v1/completions \
       i = (i + 1) % (steps.length + 3);
       setTimeout(tick, i === 0 ? 900 : 520);
     }
-    var seen = false;
-    window.addEventListener('scroll', function () {
-      var r = flow.getBoundingClientRect();
-      if (!seen && r.top < window.innerHeight * 0.8) { seen = true; tick(); }
-    });
+    setTimeout(tick, 800);
   }
 })();
 </script>
@@ -284,7 +280,7 @@ curl -s localhost:8000/v1/completions \
       s.appendChild(el('div', 'l', d[0])); row.appendChild(s);
       out[d[0]] = v; });
     stage.appendChild(row); return out; }
-  function mkcanvas(h) { var c = el('canvas', 'sim'); c.height = h || 340;
+  function mkcanvas() { var c = el('canvas', 'sim');
     stage.appendChild(c); return c; }
   // Draw a small human figure at (x,y). scale ~ body height.
   function human(ctx, x, y, s, color, wave) {
@@ -321,7 +317,7 @@ curl -s localhost:8000/v1/completions \
 
   // LLM Gateway: team requests flow through the gateway to providers.
   // A provider outage trips fallback routing and the circuit breaker.
-  var cv = mkcanvas(360); var ctx = cv.getContext('2d');
+  var cv = mkcanvas(); var ctx = cv.getContext('2d');
   var S = stats([['requests', '0'], ['served', '0'], ['fell back', '0'],
                  ['openai state', 'healthy']]);
   var box = el('div', 'log'); stage.appendChild(box);
@@ -334,10 +330,12 @@ curl -s localhost:8000/v1/completions \
   var failures = 0, mode = 'normal', running = false;
   function gx(){ return W * 0.5; }
   function draw() {
-    W = cv.width = cv.clientWidth * (window.devicePixelRatio>1?2:1);
-    ctx.setTransform(window.devicePixelRatio>1?2:1,0,0,
-      window.devicePixelRatio>1?2:1,0,0);
-    var w = cv.clientWidth; ctx.clearRect(0,0,w,H);
+    var w = cv.clientWidth, H = cv.clientHeight || 360;
+    if (w < 10) return;
+    var dpr = window.devicePixelRatio > 1 ? 2 : 1;
+    W = cv.width = w * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, H);
     // pipes
     ctx.lineWidth = 1;
     teams.forEach(function(t){ provs.forEach(function(p){
@@ -449,7 +447,7 @@ curl -s localhost:8000/v1/completions \
     S['openai state'].textContent='healthy';
     logLine(box,'ok','probe succeeded, circuit closed, primary routing resumed'); });
   window.addEventListener('resize', draw);
-  start('normal');
+  requestAnimationFrame(function(){ start('normal'); });
 
 })();
 </script>
